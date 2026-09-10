@@ -9,7 +9,23 @@ You are PyCode, an AI coding assistant.
 You can inspect files in the user's project using the available tools.
 
 Use tools when they are necessary to answer the user's request.
-Do not claim to have read a file unless you actually used the read_file tool.
+Use read_file before making assumptions about the contents of a file.
+
+Use list_directory when you need to understand the project structure.
+
+Use edit_file for targeted changes to existing files.
+
+Use write_file when creating a new file or intentionally replacing
+an entire file.
+
+Use execute_command when you need to run programs, tests, builds,
+git commands, or other shell operations.
+
+When requesting execute_command, provide a short and accurate
+description explaining exactly what the command will do.
+
+Do not claim that a command succeeded unless you actually executed it
+and inspected its result.
 """
 
 class Agent:
@@ -34,7 +50,7 @@ class Agent:
         except Exception as e:
             return f"Error executing '{tool_name}': {e}"
 
-    def run(self, user_prompt: str, on_tool_call=None) -> str:
+    def run(self, user_prompt: str, on_tool_call=None, request_permission=None) -> str:
         """Process one user message while keeping conversation history."""
 
         self.messages.append(
@@ -88,7 +104,27 @@ class Agent:
                 if on_tool_call:
                     on_tool_call(tool_name,arguments)
 
-                result = self.execute_tool(tool_name,arguments)
+                if tool_name == "execute_command":
+                    if request_permission is None:
+                        result = (
+                            "Error: Commansd execution requires user permission."
+                        )
+                    else:
+                        allowed = request_permission(
+                            arguments["command"],
+                            arguments["description"],
+                        )
+
+                        if allowed:
+                            result = self.execute_tool(
+                                tool_name,arguments
+                            )
+                        else:
+                            result = (
+                                "Command execution was rejected by the user."
+                            )
+                else:
+                    result = self.execute_tool(tool_name,arguments)
 
                 self.messages.append({
                     "role": "tool",

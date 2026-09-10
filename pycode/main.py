@@ -8,6 +8,24 @@ from pycode.agent import Agent
 
 console = Console()
 
+def request_command_permission(command: str, description: str) -> bool:
+    console.print()
+    console.print(
+        Panel(
+            f"[bold]{description}[/bold]\n\n"
+            f"[yellow]$ {command}[/yellow]",
+            title="Command execution requested",
+            border_style="yellow",
+        )
+    )
+
+
+    answer = console.input(
+        "[bold yellow]Execute? [y/N]: [/bold yellow]"
+    )
+
+    return answer.strip() in ("y","yes")
+
 def show_welcome():
     console.print(
         Panel(
@@ -50,7 +68,7 @@ def main():
     while True:
         try:
             user_input = session.prompt(
-                "\nYou ) "
+                "\nYou > "
             ).strip()
 
         except (KeyboardInterrupt,EOFError):
@@ -88,6 +106,7 @@ def main():
             response = agent.run(
                 user_input,
                 on_tool_call=show_tool_call,
+                request_permission=request_command_permission
             )
 
             show_response(response)
