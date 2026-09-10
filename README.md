@@ -49,7 +49,7 @@ Get a free API key from the [Groq Console](https://console.groq.com/keys) if you
 Once installed and your API key is set, run:
 
 ```bash
-pycode "<Your Prompt>"
+pycode
 ```
 
 This launches the CLI entry point defined in `pyproject.toml` (`pycode.main:main`).
