@@ -13,4 +13,5 @@ pycode/tools/__init__.py
 pycode/tools/edit_file.py
 pycode/tools/execute_command.py
 pycode/tools/read_file.py
+pycode/tools/registry.py
 pycode/tools/write_file.py

@@ -1,30 +1,105 @@
-import json
-import argparse
-
 from rich.console import Console
+from rich.panel import Panel
+from rich.markdown import Markdown
+from prompt_toolkit import PromptSession
+from prompt_toolkit.history import InMemoryHistory
 
-from pycode.agent import run_agent
+from pycode.agent import Agent
 
 console = Console()
 
+def show_welcome():
+    console.print(
+        Panel(
+            "[bold]Pycode[/bold]\n"
+            "AI Coding Assistant\n\n"
+            "[dim]Type /help for commands[/dim]",
+            title = "Welcome",
+            border_style="blue",
+        )
+    )
+
+def show_tool_call(tool_name: str, arguments: dict):
+    console.print(
+        f"\n[dim]-> Tool:[/dim] [cyan]{tool_name}[/cyan]"
+    )
+
+    console.print(
+        f"[dim] Arguments:[/dim] {arguments}"
+    )
+
+def show_response(response:str):
+    console.print(
+        Panel(
+            Markdown(response),
+            title="Pycode",
+            border_style="green",
+        )
+    )
+
 def main():
+    show_welcome()
+    agent = Agent()
 
-    parser = argparse.ArgumentParser(
-        description="Pycode - AI Coding Agent"
+    history = InMemoryHistory()
+
+    session = PromptSession(
+        history=history
     )
 
-    parser.add_argument(
-        "prompt",
-        help="Instruction for the coding agent"
-    )
+    while True:
+        try:
+            user_input = session.prompt(
+                "\nYou ) "
+            ).strip()
 
-    args = parser.parse_args()
+        except (KeyboardInterrupt,EOFError):
+            console.print("\n[dim]Goodbye.[/dim]")
+            break
 
+        if not user_input:
+            continue
 
-    response = run_agent(args.prompt)
+        if user_input == "/exit" or user_input == "/quit":
+            console.print("[dim]Goodbye.[/dim]")
+            break
 
-    console.print(response)
+        if user_input == "/clear":
+            agent.clear()
+            console.clear()
+            show_welcome()
+            console.print("[dim]Conversation cleared.[/dim]")
+            continue
 
+        if user_input == "/help":
+            console.print(
+                Panel(
+                    "/clear Clear conversation\n"
+                    "/help  Show this jelp message\n"
+                    "/exit  Exit PyCode\n"
+                    "/quit  Exit PyCode",
+                    title="Commands",
+                    border_style="yellow",
+                )
+            )
+            continue
+
+        try:
+            response = agent.run(
+                user_input,
+                on_tool_call=show_tool_call,
+            )
+
+            show_response(response)
+
+        except Exception as e:
+            console.print(
+                Panel(
+                    str(e),
+                    title="Error",
+                    border_style="red",
+                )
+            )
 
 if __name__ == "__main__":
     main()

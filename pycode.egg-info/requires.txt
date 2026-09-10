@@ -1,4 +1,4 @@
 groq
-typer
 rich
 python-dotenv
+prompt-toolkit

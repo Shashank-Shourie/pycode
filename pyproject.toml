@@ -5,9 +5,9 @@ description = "A simple AI coding agent built in Python"
 requires-python = ">=3.11"
 dependencies = [
     "groq",
-    "typer",
     "rich",
     "python-dotenv",
+    "prompt-toolkit",
 ]
 
 [project.scripts]
