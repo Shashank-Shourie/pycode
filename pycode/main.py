@@ -8,7 +8,15 @@ from pycode.agent import Agent
 
 console = Console()
 
-def request_command_permission(command: str, description: str) -> bool:
+def show_tool_output(line: str):
+    console.print(
+        f"[dim]|[/dim] {line}",
+    )
+
+def request_command_permission(tool_name: str, arguments: dict) -> bool:
+    command = arguments["command"]
+    description = arguments["description"]
+
     console.print()
     console.print(
         Panel(
@@ -19,9 +27,8 @@ def request_command_permission(command: str, description: str) -> bool:
         )
     )
 
-
     answer = console.input(
-        "[bold yellow]Execute? [y/N]: [/bold yellow]"
+        "[bold yellow]Execute? (y/N): [/bold yellow]"
     )
 
     return answer.strip() in ("y","yes")
@@ -106,7 +113,8 @@ def main():
             response = agent.run(
                 user_input,
                 on_tool_call=show_tool_call,
-                request_permission=request_command_permission
+                request_permission=request_command_permission,
+                on_tool_output=show_tool_output
             )
 
             show_response(response)
