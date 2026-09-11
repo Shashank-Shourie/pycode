@@ -6,7 +6,13 @@ def write_file(path: str, content: str) -> str:
     file_path = Path(path)
 
     try:
+        existed = file_path.exists()
         file_path.write_text(content)
+
+        if existed:
+            return(
+                f"Succesfully overwrote existing file '{path}'."
+            )
 
         return f"Successfully wrote to '{path}'."
     except Exception as e:
@@ -16,7 +22,7 @@ WRITE_FILE_TOOL = {
     "type": "function",
     "function":{
         "name":"write_file",
-        "description":"Create a new file or overwrite an existing file with the provided content.",
+        "description":"Create a new file or intentionally replace the entire contents of an existing file. For targeted changes to existing files, prefer edit_file instead.",
         "parameters":{
             "type":"object",
             "properties":{

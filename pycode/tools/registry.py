@@ -28,7 +28,7 @@ TOOLS = {
         name="write_file",
         function=write_file,
         definition=WRITE_FILE_TOOL,
-        requires_permission=False,
+        requires_permission=True,
         supports_streaming=False,
     ),
 
@@ -36,7 +36,7 @@ TOOLS = {
         name="edit_file",
         function=edit_file,
         definition=EDIT_FILE_TOOL,
-        requires_permission=False,
+        requires_permission=True,
         supports_streaming=False,
     ),
 

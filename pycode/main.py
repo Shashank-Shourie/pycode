@@ -1,37 +1,117 @@
 from rich.console import Console
 from rich.panel import Panel
 from rich.markdown import Markdown
+from rich.live import Live
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import InMemoryHistory
+from prompt_toolkit.formatted_text import HTML
 
 from pycode.agent import Agent
 
 console = Console()
 
+
+class ResponseRenderer:
+    """
+    Streams assistant text into a live-updating Panel.
+
+    While tokens are arriving, the panel shows plain text (fast, no
+    flicker). The instant the stream stops -- either because the turn
+    finished or because a tool call is about to interrupt it -- the
+    same panel is redrawn once as rendered Markdown, so the final
+    result looks clean.
+    """
+
+    def __init__(self, console: Console):
+        self.console = console
+        self.buffer = ""
+        self.live: Live | None = None
+
+    def _panel(self, final: bool = False) -> Panel:
+        body = Markdown(self.buffer) if final else self.buffer
+        return Panel(
+            body,
+            title="Pycode",
+            border_style="green",
+        )
+
+    def add_chunk(self, chunk: str):
+        if self.live is None:
+            self.buffer = ""
+            self.live = Live(
+                self._panel(),
+                console=self.console,
+                refresh_per_second=16,
+                vertical_overflow="visible",
+            )
+            self.live.start()
+
+        self.buffer += chunk
+        self.live.update(self._panel())
+
+    def finalize(self):
+        """Stop the live panel and leave a nicely formatted version behind."""
+        if self.live is None:
+            return
+
+        if self.buffer.strip():
+            self.live.update(self._panel(final=True))
+
+        self.live.stop()
+        self.live = None
+
+
+renderer = ResponseRenderer(console)
+
+
+def show_response_chunk(chunk: str):
+    renderer.add_chunk(chunk)
+
+
 def show_tool_output(line: str):
+    renderer.finalize()
     console.print(
         f"[dim]|[/dim] {line}",
     )
 
-def request_command_permission(tool_name: str, arguments: dict) -> bool:
-    command = arguments["command"]
-    description = arguments["description"]
+
+def request_tool_permission(tool_name: str, arguments: dict) -> bool:
+    renderer.finalize()
+
+    if tool_name == "execute_command":
+        description = arguments["description"]
+        details = f"$ {arguments['command']}"
+    elif tool_name == "write_file":
+        description = f"Write file '{arguments['path']}'"
+        details = arguments["path"]
+    elif tool_name == "edit_file":
+        description = f"Edit file '{arguments['path']}'"
+        details = (
+            f"Replace:\n"
+            f"{arguments['old_text']}\n\n"
+            f"With:\n"
+            f"{arguments['new_text']}"
+        )
+    else:
+        description = f"Execute tool '{tool_name}'"
+        details = str(arguments)
 
     console.print()
     console.print(
         Panel(
             f"[bold]{description}[/bold]\n\n"
-            f"[yellow]$ {command}[/yellow]",
+            f"{details}",
             title="Command execution requested",
             border_style="yellow",
         )
     )
 
     answer = console.input(
-        "[bold yellow]Execute? (y/N): [/bold yellow]"
+        "[bold yellow]Allow? (y/N): [/bold yellow]"
     )
 
-    return answer.strip() in ("y","yes")
+    return answer.strip() in ("y", "yes")
+
 
 def show_welcome():
     console.print(
@@ -39,12 +119,15 @@ def show_welcome():
             "[bold]Pycode[/bold]\n"
             "AI Coding Assistant\n\n"
             "[dim]Type /help for commands[/dim]",
-            title = "Welcome",
+            title="Welcome",
             border_style="blue",
         )
     )
 
+
 def show_tool_call(tool_name: str, arguments: dict):
+    renderer.finalize()
+
     console.print(
         f"\n[dim]-> Tool:[/dim] [cyan]{tool_name}[/cyan]"
     )
@@ -53,14 +136,6 @@ def show_tool_call(tool_name: str, arguments: dict):
         f"[dim] Arguments:[/dim] {arguments}"
     )
 
-def show_response(response:str):
-    console.print(
-        Panel(
-            Markdown(response),
-            title="Pycode",
-            border_style="green",
-        )
-    )
 
 def main():
     show_welcome()
@@ -75,10 +150,10 @@ def main():
     while True:
         try:
             user_input = session.prompt(
-                "\nYou > "
+                HTML("\n<ansibrightblue>You &gt;</ansibrightblue> ")
             ).strip()
 
-        except (KeyboardInterrupt,EOFError):
+        except (KeyboardInterrupt, EOFError):
             console.print("\n[dim]Goodbye.[/dim]")
             break
 
@@ -99,10 +174,10 @@ def main():
         if user_input == "/help":
             console.print(
                 Panel(
-                    "/clear Clear conversation\n"
-                    "/help  Show this jelp message\n"
-                    "/exit  Exit PyCode\n"
-                    "/quit  Exit PyCode",
+                    "[bold cyan]/clear[/bold cyan] Clear conversation\n"
+                    "[green]/help[/green]  Show this help message\n"
+                    "[red]/exit[/red]  Exit PyCode\n"
+                    "[red]/quit[/red]  Exit PyCode",
                     title="Commands",
                     border_style="yellow",
                 )
@@ -110,16 +185,18 @@ def main():
             continue
 
         try:
-            response = agent.run(
+            agent.run(
                 user_input,
                 on_tool_call=show_tool_call,
-                request_permission=request_command_permission,
-                on_tool_output=show_tool_output
+                request_permission=request_tool_permission,
+                on_tool_output=show_tool_output,
+                on_response_chunk=show_response_chunk
             )
 
-            show_response(response)
+            renderer.finalize()
 
         except Exception as e:
+            renderer.finalize()
             console.print(
                 Panel(
                     str(e),
@@ -127,6 +204,7 @@ def main():
                     border_style="red",
                 )
             )
+
 
 if __name__ == "__main__":
     main()

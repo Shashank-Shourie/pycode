@@ -19,12 +19,13 @@ def edit_file(path:str, old_text: str, new_text:str) -> str:
         if occurences == 0:
             return (
                 f"Error: The specified text was not found in '{path}'."
+                "Read the file again and use the exact existing text."
             )
 
         if occurences > 1:
             return(
                 f"Error: The specified text occurs {occurences} times "
-                f"in '{path}'. It must occur exactly once."
+                f"in '{path}'. The replacement must match exactly one location."
             )
 
         updated_content = content.replace(old_text,new_text,1)
@@ -40,7 +41,7 @@ EDIT_FILE_TOOL = {
     "function": {
         "name": "edit_file",
         "description":(
-            "Edit an existing file by replacing one exact piece of text with new text. The old text must occur exactly once."
+            "Edit an existing file by replacing one exact piece of text with new text. The old text must occur exactly once. Read the file first so that old_text exactly matches the current contents."
         ),
         "parameters": {
             "type": "object",

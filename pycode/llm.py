@@ -17,12 +17,14 @@ client = Groq(
 MODEL = "openai/gpt-oss-20b"
 
 
-def ask_llm(messages, tools=None):
+def ask_llm(messages, tools=None, stream=False):
+    """Send messages to the LLM"""
     response = client.chat.completions.create(
         model=MODEL,
         messages=messages,
         tools=tools or [],
         tool_choice="auto",
+        stream=stream
     )
 
     return response
