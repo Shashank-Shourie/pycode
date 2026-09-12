@@ -5,8 +5,12 @@ from rich.live import Live
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.formatted_text import HTML
+from rich.text import Text
+from rich.box import ROUNDED
 
 from pycode.agent import Agent
+
+from pycode.utils.diff import build_edit_diff
 
 console = Console()
 
@@ -86,22 +90,27 @@ def request_tool_permission(tool_name: str, arguments: dict) -> bool:
         details = arguments["path"]
     elif tool_name == "edit_file":
         description = f"Edit file '{arguments['path']}'"
-        details = (
-            f"Replace:\n"
-            f"{arguments['old_text']}\n\n"
-            f"With:\n"
-            f"{arguments['new_text']}"
-        )
+        details = build_edit_diff(arguments)
     else:
         description = f"Execute tool '{tool_name}'"
         details = str(arguments)
 
+    panel_content = Text()
+    panel_content.append(description, style="bold",)
+    panel_content.append("\n\n")
+
+
+    if isinstance(details,Text):
+        panel_content.append(details)
+    else:
+        panel_content.append(str(details))
+
     console.print()
     console.print(
         Panel(
-            f"[bold]{description}[/bold]\n\n"
-            f"{details}",
-            title="Command execution requested",
+            panel_content,
+            box=ROUNDED,
+            title="Permission requested",
             border_style="yellow",
         )
     )
@@ -119,6 +128,7 @@ def show_welcome():
             "[bold]Pycode[/bold]\n"
             "AI Coding Assistant\n\n"
             "[dim]Type /help for commands[/dim]",
+            box=ROUNDED,
             title="Welcome",
             border_style="blue",
         )
@@ -178,6 +188,7 @@ def main():
                     "[green]/help[/green]  Show this help message\n"
                     "[red]/exit[/red]  Exit PyCode\n"
                     "[red]/quit[/red]  Exit PyCode",
+                    box=ROUNDED,
                     title="Commands",
                     border_style="yellow",
                 )
@@ -197,13 +208,15 @@ def main():
 
         except Exception as e:
             renderer.finalize()
-            console.print(
-                Panel(
-                    str(e),
-                    title="Error",
-                    border_style="red",
-                )
-            )
+            console.print_exception()
+            # console.print(
+            #     Panel(
+            #         str(e),
+            #         box=ROUNDED,
+            #         title="Error",
+            #         border_style="red",
+            #     )
+            # )
 
 
 if __name__ == "__main__":
